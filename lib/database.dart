@@ -33,7 +33,12 @@ class DataBase {
       "StudentDB",
 
       //this calls the toJson method that converts the Map into Json format
-      studentData.toJson(),
+      studentData.toJson(), // >> {
+      //   'name': name,
+      //   'studentID': studentID.toString(),
+      //   'course': course,
+      // };
+
       // {
       //   'name': 'john',
       //   'studentID': '',
@@ -75,11 +80,23 @@ class DataBase {
       "StudentDB",
 
       // ? is a placeholder, and whereArgs provides the actual value safely (helps prevent SQL injection).
-      where: "id = ?",
+      where: "name = ?",
 
       // This retrieves rows where id is equal to studentData.id
-      whereArgs: [studentData.studentID],
+      whereArgs: [studentData.name],
     );
+    // return await db.rawDelete(
+    //   'DELETE FROM StudentDB WHERE name = ?',
+    //   [studentData.name],
+
+    //   // "StudentDB",
+
+    //   // ? is a placeholder, and whereArgs provides the actual value safely (helps prevent SQL injection).
+    //   // where: "id = ?",
+
+    //   // This retrieves rows where id is equal to studentData.id
+    //   // whereArgs: [studentData.name],
+    // );
   }
 
   // To Get all the fields in the Database titled: StudentDB, this function is called
@@ -89,7 +106,7 @@ class DataBase {
     List<Map<String, dynamic>> database = await db.query("StudentDB");
 
     if (database.isNotEmpty) {
-      print(database);
+      // print(database);
       List<StudentModel> res =
           database.map((e) => StudentModel.fromJson(e)).toList();
       return res;

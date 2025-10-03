@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:sqflite/sqflite.dart';
-import 'dart:io';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 // import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqlflite_class/controllers.dart';
 import 'package:sqlflite_class/database.dart';
 import 'package:sqlflite_class/student_model.dart';
+import 'package:sqlflite_class/theme.dart';
 import 'package:sqlflite_class/widgets.dart';
 
 Future<void> main() async {
-  runApp(const MyApp());
+  runApp(ProviderScope(child: MyApp()));
   // Initialize FFI
   // sqfliteFfiInit();
 
@@ -21,31 +21,62 @@ Future<void> main() async {
   // await Directory(dbPath).create(recursive: true); // Ensure the directory exists
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+final themeProvider = StateProvider<ThemeMode>((ref) {
+  return ThemeMode.light;
+});
+
+Future<void> getUser() async {}
+
+// final themeProviders = Provider<void>((ref) {
+//   return getUser();
+// });
+
+final themeProviderss = FutureProvider<void>((ref) async {
+  return getUser();
+});
+
+class MyApp extends ConsumerWidget {
+  MyApp({super.key});
+  bool _theme = false;
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext contex, WidgetRef ref) {
     return MaterialApp(
       title: 'Flutter Demo',
+      themeMode: ref.watch(themeProvider),
+      darkTheme: AppTheme.checkTheme(theme: ref.watch(themeProvider)),
+      // ThemeData(
+      //   textTheme: TextTheme(
+      //     displayLarge: TextStyle().copyWith(color: Colors.white),
+      //   ),
+      //   brightness: Brightness.dark,
+      //   // scaffoldBackgroundColor: Colors.deepPurple,
+      // ),
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.dark(primary: AppColors.appSafe),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle().copyWith(color: Colors.black),
+        ),
+        iconTheme: IconThemeData(color: AppColors.appRed),
+
+        brightness: Brightness.light,
       ),
+      // theme: AppTheme.checkTheme(true),
       home: const MyHomePage(title: 'Flutter SQFLite'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title});
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  ConsumerState<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends ConsumerState<MyHomePage> {
   String? _course;
   List allStud = [];
 
@@ -57,15 +88,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<List> getAllData() async {
     allStud.clear();
+    // print('Done');
     List<StudentModel>? res = await DataBase.getAllNote();
     for (var i = 0; i < res!.length; i++) {
       allStud.add(res[i]);
     }
+    // print('this is a;; Stud ${allStud.length}');
     return allStud;
   }
 
   @override
   Widget build(BuildContext context) {
+    // setState(() {
+    List res = allStud;
+    // });
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
@@ -90,6 +126,16 @@ class _MyHomePageState extends State<MyHomePage> {
                 control: courseController,
               ),
               SizedBox(height: 30),
+              TextButton(
+                onPressed: () {
+                  if (ref.watch(themeProvider) == ThemeMode.light) {
+                    ref.read(themeProvider.notifier).state = ThemeMode.dark;
+                  } else {
+                    ref.read(themeProvider.notifier).state = ThemeMode.light;
+                  }
+                },
+                child: Text('Toggle Mode'),
+              ),
               DropDownWidget(
                 title: 'Course',
                 dropDown: [
@@ -111,6 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
               Expanded(
                 child: Container(
                   color: const Color.fromARGB(255, 207, 153, 216),
+                  height: 600,
                   width: MediaQuery.of(context).size.width * 0.9,
                   child: FutureBuilder(
                     future: getAllData(),
@@ -125,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             height: 600,
                             child: Column(
                               children: [
-                                ...allStud.map(
+                                ...res.map(
                                   (e) => Column(
                                     children: [
                                       Card(
@@ -152,12 +199,28 @@ class _MyHomePageState extends State<MyHomePage> {
                                                     children: [
                                                       Text(e.name),
                                                       SizedBox(height: 5),
-                                                      Text('${e.studentID}'),
+                                                      Text(
+                                                        '${e.studentID}',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .labelSmall!
+                                                            .copyWith(
+                                                              color: Colors.red,
+                                                            ),
+                                                      ),
                                                     ],
                                                   ),
                                                 ],
                                               ),
                                               Text(e.course),
+                                              IconButton(
+                                                onPressed: () async {
+                                                  await DataBase.deleteNote(e);
+
+                                                  await getAllData();
+                                                },
+                                                icon: Icon(Icons.delete),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -201,7 +264,9 @@ class _MyHomePageState extends State<MyHomePage> {
               course: course!,
             );
             await DataBase.addNote(student);
-            await getAllData();
+            setState(() async {
+              await getAllData();
+            });
           }
         },
         tooltip: 'Increment',
